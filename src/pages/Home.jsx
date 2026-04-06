@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Search, MapPin, Filter, Star, Info, MessageSquare, Send, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import useServices from '../hooks/useServices';
+import bookingService from '../services/bookingService';
 
 const INITIAL_FILTERS = {
   category: '',
@@ -11,36 +12,40 @@ const INITIAL_FILTERS = {
 };
 
 const Home = () => {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
   const [bookingData, setBookingData] = useState({ startDate: '', endDate: '' });
-  const [bookingStatus, setBookingStatus] = useState({ success: '', error: '' });
+  const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });
   const [filters, setFilters] = useState(INITIAL_FILTERS);
-
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { user } = useAuth();
 
-  const fetchServices = async (showLoading = false) => {
-    if (showLoading) setLoading(true);
-    try {
-      const { data } = await axios.get('http://localhost:5000/api/services', { params: filters });
-      setServices(data);
-    } catch (error) {
-      console.error('Error fetching services', error);
-    }
-    if (showLoading) setLoading(false);
-    setIsInitialLoad(false);
+  const {
+    services,
+    loading,
+    pagination,
+    fetchServices
+  } = useServices();
+
+  const calculateDays = (start, end) => {
+    if (!start || !end) return 0;
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const diff = Math.round((new Date(end) - new Date(start)) / MS_PER_DAY) + 1;
+    return diff > 0 ? diff : 0;
   };
 
-  // Handle both initial load and debounced filter updates
+  const estimatedDays = useMemo(() => calculateDays(bookingData.startDate, bookingData.endDate), [bookingData.startDate, bookingData.endDate]);
+  const estimatedTotal = useMemo(() => selectedService ? selectedService.pricePerDay * estimatedDays : 0, [selectedService, estimatedDays]);
+  const [bookingStatus, setBookingStatus] = useState({ success: '', error: '' });
+
+  // Handle both initial load and debounced filter/sort/page updates
   useEffect(() => {
     const handler = setTimeout(() => {
-      fetchServices(isInitialLoad);
+      fetchServices(filters, pagination.currentPage, sort);
+      setIsInitialLoad(false);
     }, isInitialLoad ? 0 : 500);
 
     return () => clearTimeout(handler);
-  }, [filters]);
+  }, [filters, sort, pagination.currentPage, fetchServices]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -49,18 +54,46 @@ const Home = () => {
 
   const handleClearFilters = () => {
     setFilters(INITIAL_FILTERS);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setSort({ sortBy: 'createdAt', sortOrder: 'desc' });
   };
 
   const isFilterActive = Object.values(filters).some(val => val !== '');
 
-  const handleBook = async (e) => {
+  const validateBooking = () => {
+    if (!bookingData.startDate || !bookingData.endDate) {
+      setBookingStatus({ success: '', error: 'Please select both start and end dates.' });
+      return false;
+    }
+    const start = new Date(bookingData.startDate);
+    const end = new Date(bookingData.endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (start < today) {
+      setBookingStatus({ success: '', error: 'Start date cannot be in the past.' });
+      return false;
+    }
+    if (end < start) {
+      setBookingStatus({ success: '', error: 'End date must be after start date.' });
+      return false;
+    }
+    return true;
+  };
+
+  const handleBook = useCallback(async (e) => {
     e.preventDefault();
+    setBookingStatus({ success: '', error: '' });
+
     if (!user) {
       setBookingStatus({ success: '', error: 'Please login to book services.' });
       return;
     }
+
+    if (!validateBooking()) return;
+
     try {
-      await axios.post('http://localhost:5000/api/bookings', {
+      await bookingService.createBooking({
         serviceId: selectedService._id,
         startDate: bookingData.startDate,
         endDate: bookingData.endDate
@@ -70,7 +103,12 @@ const Home = () => {
     } catch (error) {
       setBookingStatus({ success: '', error: error.response?.data?.error || 'Booking failed.' });
     }
-  };
+  }, [user, validateBooking, selectedService, bookingData]);
+
+  // Memoized callback for ServiceCard
+  const handleOnBook = useCallback((service) => {
+    setSelectedService(service);
+  }, []);
 
   return (
     <div className="container" style={{ paddingTop: '40px' }}>
@@ -112,7 +150,7 @@ const Home = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => fetchServices(true)} className="btn btn-primary" style={{ height: '48px' }}>
+          <button onClick={() => fetchServices(filters, 1, sort)} className="btn btn-primary" style={{ height: '48px' }}>
             <Filter size={18} /> Apply
           </button>
           
@@ -121,6 +159,28 @@ const Home = () => {
               <RotateCcw size={18} /> Clear
             </button>
           )}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Showing {services.length} of {pagination.totalCount} services</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Sort by:</span>
+          <select 
+            value={`${sort.sortBy}-${sort.sortOrder}`} 
+            onChange={(e) => {
+              const [sortBy, sortOrder] = e.target.value.split('-');
+              setSort({ sortBy, sortOrder });
+              setPagination(prev => ({ ...prev, currentPage: 1 }));
+            }}
+            className="form-input" 
+            style={{ width: '180px', marginBottom: 0, height: '40px' }}
+          >
+            <option value="createdAt-desc">Newest First</option>
+            <option value="pricePerDay-asc">Price: Low to High</option>
+            <option value="pricePerDay-desc">Price: High to Low</option>
+            <option value="title-asc">Name: A-Z</option>
+          </select>
         </div>
       </div>
 
@@ -152,7 +212,7 @@ const Home = () => {
         ) : services.length > 0 ? (
           <div className="grid grid-3" style={{ opacity: loading ? 0.7 : 1, transition: 'opacity 0.3s ease' }}>
             {services.map((service) => (
-              <ServiceCard key={service._id} service={service} onBook={() => setSelectedService(service)} />
+              <MemoizedServiceCard key={service._id} service={service} onBook={handleOnBook} />
             ))}
           </div>
         ) : (
@@ -162,6 +222,28 @@ const Home = () => {
             </div>
             <h3>No services found</h3>
             <p style={{ color: 'var(--text-muted)' }}>Try adjusting your search or filters.</p>
+          </div>
+        )}
+
+        {pagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '40px' }}>
+            <button 
+              disabled={pagination.currentPage === 1} 
+              onClick={() => fetchServices(filters, pagination.currentPage - 1, sort)}
+              className="btn btn-outline"
+              style={{ opacity: pagination.currentPage === 1 ? 0.5 : 1 }}
+            >
+              Previous
+            </button>
+            <span style={{ color: 'var(--text-muted)' }}>Page {pagination.currentPage} of {pagination.totalPages}</span>
+            <button 
+              disabled={pagination.currentPage === pagination.totalPages} 
+              onClick={() => fetchServices(filters, pagination.currentPage + 1, sort)}
+              className="btn btn-outline"
+              style={{ opacity: pagination.currentPage === pagination.totalPages ? 0.5 : 1 }}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>
@@ -186,6 +268,24 @@ const Home = () => {
                 <label>End Date</label>
                 <input type="date" className="form-input" value={bookingData.endDate} onChange={(e) => setBookingData({ ...bookingData, endDate: e.target.value })} />
               </div>
+
+              {estimatedDays > 0 && (
+                <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '12px', padding: '16px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Duration</span>
+                    <span style={{ color: 'var(--text)', fontWeight: '600' }}>{estimatedDays} {estimatedDays === 1 ? 'day' : 'days'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Price per day</span>
+                    <span style={{ color: 'var(--text)', fontWeight: '600' }}>₹{selectedService.pricePerDay}</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(139, 92, 246, 0.2)', paddingTop: '10px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text)', fontWeight: '700' }}>Estimated Total</span>
+                    <span style={{ color: 'var(--primary)', fontWeight: '800', fontSize: '1.2rem' }}>₹{estimatedTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-4" style={{ marginTop: '24px' }}>
                 <button type="button" onClick={() => setSelectedService(null)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>Confirm Booking</button>
@@ -218,12 +318,14 @@ const ServiceCard = ({ service, onBook }) => {
             <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem' }}>₹{service.pricePerDay}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}> / day</span>
           </div>
-          <button onClick={onBook} className="btn btn-outline" style={{ padding: '8px 16px' }}>View Details</button>
+          <button onClick={() => onBook(service)} className="btn btn-outline" style={{ padding: '8px 16px' }}>View Details</button>
         </div>
       </div>
     </div>
   );
 };
+
+const MemoizedServiceCard = memo(ServiceCard);
 
 
 export default Home;

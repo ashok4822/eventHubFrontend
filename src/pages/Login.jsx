@@ -18,8 +18,24 @@ const Login = () => {
     }
   }, [user, navigate]);
 
+  const validateLogin = () => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    if (!password) {
+      setError("Password is required");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    
+    if (!validateLogin()) return;
+
     try {
       const user = await login(email, password);
       if (user.role === 'admin') navigate('/admin');

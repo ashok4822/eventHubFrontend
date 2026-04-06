@@ -1,51 +1,75 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Plus, Edit, Trash2, Calendar, LayoutDashboard, Settings, Info, MapPin, DollarSign, List, Filter } from 'lucide-react';
+import useServices from '../hooks/useServices';
+import useBookings from '../hooks/useBookings';
+import eventService from '../services/eventService';
 
 const AdminDashboard = () => {
-  const [services, setServices] = useState([]);
-  const [bookings, setBookings] = useState([]);
   const [activeTab, setActiveTab] = useState('services');
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [formData, setFormData] = useState({ title: '', category: 'venue', pricePerDay: '', description: '', location: '', contactDetails: '' });
   const [modalError, setModalError] = useState('');
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const servicesRes = await axios.get('http://localhost:5000/api/services');
-      const bookingsRes = await axios.get('http://localhost:5000/api/bookings/admin');
-      setServices(servicesRes.data);
-      setBookings(bookingsRes.data);
-    } catch (error) {
-      console.error('Error fetching admin data', error);
-    }
-    setLoading(false);
+  const { services, loading: servicesLoading, fetchServices, setServices } = useServices();
+  const { bookings, loading: bookingsLoading, fetchAdminBookings } = useBookings();
+
+  const fetchData = () => {
+    fetchServices();
+    fetchAdminBookings();
   };
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchServices, fetchAdminBookings]);
+
+  const loading = servicesLoading || bookingsLoading;
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const validateService = () => {
+    if (!formData.title || formData.title.length < 3) {
+      setModalError("Title must be at least 3 characters long");
+      return false;
+    }
+    if (!formData.pricePerDay || parseFloat(formData.pricePerDay) <= 0) {
+      setModalError("Price per day must be a positive number");
+      return false;
+    }
+    if (!formData.description || formData.description.length < 10) {
+      setModalError("Description must be at least 10 characters long");
+      return false;
+    }
+    if (!formData.location) {
+      setModalError("Location is required");
+      return false;
+    }
+    if (!formData.contactDetails) {
+      setModalError("Contact details are required");
+      return false;
+    }
+    return true;
+  };
+
   const handleAddOrUpdate = async (e) => {
     e.preventDefault();
+    setModalError('');
+
+    if (!validateService()) return;
+
     try {
       if (editingService) {
-        await axios.put(`http://localhost:5000/api/services/${editingService._id}`, formData);
+        await eventService.updateService(editingService._id, formData);
       } else {
-        await axios.post('http://localhost:5000/api/services', formData);
+        await eventService.createService(formData);
       }
       setShowModal(false);
       setEditingService(null);
       setFormData({ title: '', category: 'venue', pricePerDay: '', description: '', location: '', contactDetails: '' });
       setModalError('');
-      fetchData();
+      fetchServices();
     } catch (error) {
       setModalError(error.response?.data?.error || 'Error saving service');
       console.error('Error saving service', error);
@@ -55,8 +79,8 @@ const AdminDashboard = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Delete this service?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/services/${id}`);
-        fetchData();
+        await eventService.deleteService(id);
+        fetchServices();
       } catch (error) {
         console.error('Error deleting service', error);
       }
@@ -107,7 +131,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid grid-3">
-            {services.map((service) => (
+            {services?.map((service) => (
               <div key={service._id} className="glass" style={{ padding: '24px', background: 'var(--surface)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                   <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)', fontWeight: 'bold' }}>{service.category.toUpperCase()}</span>

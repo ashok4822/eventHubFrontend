@@ -1,40 +1,69 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import { setAccessToken } from '../services/api';
+import authService from '../services/authService';
 
+/**
+ * Context to manage user authentication state across the application.
+ */
 const AuthContext = createContext();
 
+/**
+ * Provider component that wraps the app and provides authentication state and actions.
+ */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // On app mount, attempt a silent refresh to restore session from HttpOnly cookie
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-    setLoading(false);
+    const tryRestoreSession = async () => {
+      try {
+        const data = await authService.refresh();
+        // Decode basic user info from the access token payload
+        const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
+        // Restore user info from localStorage (non-sensitive: name, email, role)
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
+          setUser({ id: payload.id, role: payload.role });
+        }
+      } catch {
+        // Refresh token missing or expired — user must log in again
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    tryRestoreSession();
   }, []);
 
+  /**
+   * Authenticates a user, stores access token in memory, and sets user state.
+   */
   const login = async (email, password) => {
-    const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
+    const data = await authService.login(email, password);
+    // Only store non-sensitive user info in localStorage for UI persistence
     localStorage.setItem('user', JSON.stringify(data.user));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     setUser(data.user);
     return data.user;
   };
 
+  /**
+   * Registers a new user.
+   */
   const signup = async (name, email, password, role) => {
-    const { data } = await axios.post('http://localhost:5000/api/auth/register', { name, email, password, role });
+    const data = await authService.signup({ name, email, password, role });
     return data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  /**
+   * Logs out the user: clears the HttpOnly cookie via the backend, and clears state.
+   */
+  const logout = async () => {
+    await authService.logout();
+    setAccessToken(null);
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
@@ -45,4 +74,8 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+/**
+ * Custom hook to use the Auth context.
+ */
 export const useAuth = () => useContext(AuthContext);
+

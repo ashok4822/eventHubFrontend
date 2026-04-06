@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Calendar, MapPin, Tag, Clock, ArrowRight } from 'lucide-react';
+import useBookings from '../hooks/useBookings';
 
 const UserDashboard = () => {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { bookings, loading, fetchMyBookings } = useBookings();
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const { data } = await axios.get('http://localhost:5000/api/bookings/my');
-        setBookings(data);
-      } catch (error) {
-        console.error('Error fetching bookings', error);
-      }
-      setLoading(false);
-    };
-    fetchBookings();
-  }, []);
+    fetchMyBookings();
+  }, [fetchMyBookings]);
 
   return (
     <div className="container" style={{ paddingTop: '40px' }}>
@@ -53,7 +43,7 @@ const UserDashboard = () => {
   );
 };
 
-const BookingCard = ({ booking }) => {
+const BookingCard = memo(({ booking }) => {
   const service = booking.serviceId;
   const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -89,6 +79,6 @@ const BookingCard = ({ booking }) => {
       </div>
     </div>
   );
-};
+});
 
 export default UserDashboard;
