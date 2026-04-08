@@ -49,8 +49,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 and not already retrying (avoid infinite loop)
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // If 401, not already retrying, AND NOT a login request
+    if (
+      error.response?.status === 401 && 
+      !originalRequest._retry && 
+      !originalRequest.url.includes('/auth/login')
+    ) {
       if (isRefreshing) {
         // Queue subsequent requests while a refresh is in progress
         return new Promise((resolve, reject) => {
