@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, LayoutDashboard, User as UserIcon, Calendar } from 'lucide-react';
+import { LogOut, LayoutDashboard, Calendar } from 'lucide-react';
 
-const Navbar = () => {
+const Navbar = (): React.JSX.Element => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     logout();
     navigate('/login');
   };

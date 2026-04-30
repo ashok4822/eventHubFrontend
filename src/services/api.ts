@@ -1,26 +1,23 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 
-/**
- * In-memory store for the short-lived access token.
- * Keeping it out of localStorage protects against XSS attacks.
- */
-let accessToken = null;
+// In-memory store for the short-lived access token.
+// Keeping it out of localStorage protects against XSS attacks.
+let accessToken: string | null = null;
 
-export const setAccessToken = (token) => { accessToken = token; };
-export const getAccessToken = () => accessToken;
+export const setAccessToken = (token: string | null): void => {
+  accessToken = token;
+};
+export const getAccessToken = (): string | null => accessToken;
 
-/**
- * Centered axios configuration for the application.
- * Uses environment variable for base URL.
- */
+// Axios instance with base URL from env
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  withCredentials: true, // Required to send/receive HttpOnly cookies
+  withCredentials: true,
 });
 
-// Request interceptor: attach the in-memory access token to every request
+// Request interceptor: attach in-memory access token to every request
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -31,33 +28,40 @@ api.interceptors.request.use(
 
 // Response interceptor: handle 401 errors with silent refresh
 let isRefreshing = false;
-let failedQueue = [];
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error: unknown, token: string | null = null): void => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(token as string);
     }
   });
   failedQueue = [];
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Standardized response handling: unwrap 'data' field if it exists and success is true
+    const resBody = response.data;
+    if (resBody && typeof resBody === 'object' && resBody.success === true) {
+      if ('data' in resBody && resBody.data !== undefined) {
+        return { ...response, data: resBody.data };
+      }
+    }
+    return response;
+  },
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // If 401, not already retrying, AND NOT a login request
     if (
-      error.response?.status === 401 && 
-      !originalRequest._retry && 
-      !originalRequest.url.includes('/auth/login')
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login')
     ) {
       if (isRefreshing) {
-        // Queue subsequent requests while a refresh is in progress
-        return new Promise((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
@@ -71,8 +75,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Call refresh endpoint — cookie is sent automatically
-        const { data } = await axios.post(
+        const { data } = await axios.post<{ accessToken: string }>(
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
           {},
           { withCredentials: true }
@@ -95,4 +98,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-

@@ -1,9 +1,10 @@
 import React, { useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, MapPin, Tag, Clock, ArrowRight } from 'lucide-react';
+import { Calendar, MapPin, Clock, ArrowRight } from 'lucide-react';
 import useBookings from '../hooks/useBookings';
+import { Booking } from '../services/bookingService';
 
-const UserDashboard = () => {
+const UserDashboard = (): React.JSX.Element => {
   const { user } = useAuth();
   const { bookings, loading, fetchMyBookings } = useBookings();
 
@@ -43,21 +44,39 @@ const UserDashboard = () => {
   );
 };
 
-const BookingCard = memo(({ booking }) => {
+interface BookingCardProps {
+  booking: Booking;
+}
+
+const BookingCard = memo(({ booking }: BookingCardProps): React.JSX.Element => {
   const service = booking.serviceId;
+  
+  if (typeof service === 'string') {
+    return <div className="glass">Loading service details...</div>;
+  }
+
   const startDate = new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const endDate = new Date(booking.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const getCategoryEmoji = (category: string): string => {
+    const map: Record<string, string> = {
+      venue: '🏰', hotel: '🏨', caterer: '🍽️', cameraman: '📸', DJ: '🎧',
+    };
+    return map[category] || '✨';
+  };
 
   return (
     <div className="glass animate-fade" style={{ background: 'var(--surface)', padding: '24px' }}>
       <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
         <div style={{ width: '100px', height: '100px', background: 'var(--background)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
-          {service.category === 'venue' ? '🏰' : service.category === 'hotel' ? '🏨' : service.category === 'caterer' ? '🍽️' : service.category === 'cameraman' ? '📸' : '🎧'}
+          {getCategoryEmoji(service.category)}
         </div>
         <div style={{ flex: 1 }}>
           <div className="flex justify-between items-start">
             <h3 style={{ marginBottom: '4px' }}>{service.title}</h3>
-            <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 'bold', border: '1px solid rgba(16, 185, 129, 0.2)' }}>{booking.status.toUpperCase()}</span>
+            <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 'bold', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+              {booking.status.toUpperCase()}
+            </span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
             <MapPin size={14} /> {service.location}

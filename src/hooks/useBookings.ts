@@ -1,21 +1,30 @@
 import { useState, useCallback } from 'react';
-import bookingService from '../services/bookingService';
+import bookingService, { Booking } from '../services/bookingService';
+
+interface UseBookingsReturn {
+  bookings: Booking[];
+  loading: boolean;
+  error: string | null;
+  fetchMyBookings: () => Promise<void>;
+  fetchAdminBookings: () => Promise<void>;
+  setBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
+}
 
 /**
  * Hook to manage bookings data and its lifecycle.
  */
-const useBookings = () => {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+const useBookings = (): UseBookingsReturn => {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchMyBookings = useCallback(async () => {
+  const fetchMyBookings = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
       const data = await bookingService.getMyBookings();
       setBookings(data || []);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch your bookings');
       console.error('Error in fetchMyBookings:', err);
     } finally {
@@ -23,13 +32,13 @@ const useBookings = () => {
     }
   }, []);
 
-  const fetchAdminBookings = useCallback(async () => {
+  const fetchAdminBookings = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
       const data = await bookingService.getAdminBookings();
       setBookings(data || []);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch admin bookings');
       console.error('Error in fetchAdminBookings:', err);
     } finally {
@@ -43,7 +52,7 @@ const useBookings = () => {
     error,
     fetchMyBookings,
     fetchAdminBookings,
-    setBookings
+    setBookings,
   };
 };
 

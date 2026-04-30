@@ -1,32 +1,37 @@
-import React, { Component } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
-class ErrorBoundary extends Component {
-  constructor(props) {
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, errorInfo) {
-    // log the error to an error reporting service
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  handleReset = () => {
+  handleReset = (): void => {
     this.setState({ hasError: false, error: null });
-    // Reloading the page is a safe way to clear memory and reset state
     window.location.reload();
   };
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
-      // Fallback UI
       return (
         <div style={{
           minHeight: '100vh',
@@ -37,10 +42,10 @@ class ErrorBoundary extends Component {
           padding: '20px',
           color: 'var(--text-main)'
         }}>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
             className="glass"
             style={{
               padding: '48px',
@@ -67,10 +72,10 @@ class ErrorBoundary extends Component {
             }}>
               <AlertTriangle size={48} strokeWidth={1.5} />
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h1 style={{ 
-                fontSize: '1.75rem', 
+              <h1 style={{
+                fontSize: '1.75rem',
                 fontWeight: '700',
                 background: 'linear-gradient(to bottom right, #fff, #94a3b8)',
                 WebkitBackgroundClip: 'text',
@@ -98,11 +103,11 @@ class ErrorBoundary extends Component {
                 border: '1px solid rgba(239, 68, 68, 0.2)'
               }}>
                 <div style={{ fontWeight: '600', marginBottom: '8px', color: '#ef4444' }}>Error Stack:</div>
-                {this.state.error && this.state.error.stack ? this.state.error.stack : this.state.error?.toString()}
+                {this.state.error?.stack ?? this.state.error?.toString()}
               </div>
             )}
 
-            <button 
+            <button
               onClick={this.handleReset}
               className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center', height: '52px', fontSize: '1.05rem' }}
@@ -110,9 +115,9 @@ class ErrorBoundary extends Component {
               <RefreshCcw size={20} />
               Refresh Application
             </button>
-            
-            <button 
-              onClick={() => window.location.href = '/'}
+
+            <button
+              onClick={() => { window.location.href = '/'; }}
               className="btn btn-outline"
               style={{ width: '100%', justifyContent: 'center', height: '52px' }}
             >

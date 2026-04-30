@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, LogIn, Mail, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+const Login = (): React.JSX.Element => {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
@@ -18,30 +18,30 @@ const Login = () => {
     }
   }, [user, navigate]);
 
-  const validateLogin = () => {
+  const validateLogin = (): boolean => {
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setError("Please enter a valid email address");
+      setError('Please enter a valid email address');
       return false;
     }
     if (!password) {
-      setError("Password is required");
+      setError('Password is required');
       return false;
     }
     return true;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    setError("");
-    
+    setError('');
+
     if (!validateLogin()) return;
 
     try {
-      const user = await login(email, password);
-      if (user.role === 'admin') navigate('/admin');
+      const loggedInUser = await login(email, password);
+      if (loggedInUser.role === 'admin') navigate('/admin');
       else navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed');
     }
   };
 
@@ -67,22 +67,28 @@ const Login = () => {
           <div className="form-group">
             <label><Lock size={14} style={{ marginRight: '4px' }} /> Password</label>
             <div className="password-input-wrapper">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                className="form-input" 
-                placeholder="••••••••" 
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-input"
+                placeholder="••••••••"
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="password-toggle-btn"
                 onClick={() => setShowPassword(!showPassword)}
-                tabIndex="-1"
+                tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px', marginTop: '-12px' }}>
+            <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: '500' }}>
+              Forgot password?
+            </Link>
           </div>
 
           <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', marginTop: '10px' }}>Login</button>
