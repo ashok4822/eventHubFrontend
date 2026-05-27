@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, MapPin, List } from 'lucide-react';
+import { Plus, List } from 'lucide-react';
 import useServices from '../hooks/useServices';
 import useBookings from '../hooks/useBookings';
 import useAdminActions from '../hooks/useAdminActions';

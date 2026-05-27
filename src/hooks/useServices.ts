@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import eventService, { Service, ServiceQueryParams } from '../services/eventService';
+import { getErrorMessage } from '../utils/error';
 
 interface PaginationState {
   currentPage: number;
@@ -59,14 +60,14 @@ const useServices = (initialPage: number = 1): UseServicesReturn => {
           totalPages: data.totalPages || 1,
           totalCount: data.totalCount || 0,
         }));
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Failed to fetch services');
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, 'Failed to fetch services'));
         console.error('Error in useServices:', err);
       } finally {
         setLoading(false);
       }
     },
-    [pagination.limit]
+    [pagination.limit, pagination.currentPage]
   );
 
   return {

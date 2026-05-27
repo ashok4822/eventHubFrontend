@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import authService from '../services/authService';
 import { Mail, ArrowLeft, Send, CheckCircle } from 'lucide-react';
+import { getErrorMessage } from '../utils/error';
 
 const ForgotPassword = (): React.JSX.Element => {
   const [email, setEmail] = useState<string>('');
@@ -25,8 +26,8 @@ const ForgotPassword = (): React.JSX.Element => {
       const response = await authService.forgotPassword(email);
       setMessage(response.message);
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Something went wrong. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Something went wrong. Please try again.'));
     } finally {
       setLoading(false);
     }

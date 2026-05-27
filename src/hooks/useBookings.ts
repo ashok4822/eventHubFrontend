@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import bookingService, { Booking } from '../services/bookingService';
+import { getErrorMessage } from '../utils/error';
 
 interface UseBookingsReturn {
   bookings: Booking[];
@@ -24,8 +25,8 @@ const useBookings = (): UseBookingsReturn => {
     try {
       const data = await bookingService.getMyBookings();
       setBookings(data || []);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch your bookings');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to fetch your bookings'));
       console.error('Error in fetchMyBookings:', err);
     } finally {
       setLoading(false);
@@ -38,8 +39,8 @@ const useBookings = (): UseBookingsReturn => {
     try {
       const data = await bookingService.getAdminBookings();
       setBookings(data || []);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch admin bookings');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to fetch admin bookings'));
       console.error('Error in fetchAdminBookings:', err);
     } finally {
       setLoading(false);

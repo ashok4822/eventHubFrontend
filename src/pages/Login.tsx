@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { getErrorMessage } from '../utils/error';
 
 const Login = (): React.JSX.Element => {
   const [email, setEmail] = useState<string>('');
@@ -40,8 +41,8 @@ const Login = (): React.JSX.Element => {
       const loggedInUser = await login(email, password);
       if (loggedInUser.role === 'admin') navigate('/admin');
       else navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Login failed'));
     }
   };
 

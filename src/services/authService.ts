@@ -27,8 +27,8 @@ const authService = {
     return data;
   },
 
-  async signup(userData: SignupData): Promise<{ message: string; user: any }> {
-    const { data } = await api.post<{ message: string; user: any }>('/auth/register', userData);
+  async signup(userData: SignupData): Promise<{ message: string; user: LoginResponse['user'] }> {
+    const { data } = await api.post<{ message: string; user: LoginResponse['user'] }>('/auth/register', userData);
     return data;
   },
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, MapPin, Filter, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import useServices from '../hooks/useServices';
@@ -6,6 +6,7 @@ import useServiceFilters from '../hooks/useServiceFilters';
 import bookingService from '../services/bookingService';
 import { Service } from '../services/eventService';
 import { SERVICE_CATEGORIES } from '../constants/categories';
+import { getErrorMessage } from '../utils/error';
 
 // Components
 import ServiceCard from '../components/ServiceCard';
@@ -25,7 +26,7 @@ const Home = (): React.JSX.Element => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [bookingData, setBookingData] = useState<BookingFormData>({ startDate: '', endDate: '' });
   const [bookingStatus, setBookingStatus] = useState<BookingStatus>({ success: '', error: '' });
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  const isInitialLoad = useRef<boolean>(true);
   
   const { user } = useAuth();
   const { services, loading, pagination, fetchServices } = useServices();
@@ -34,12 +35,12 @@ const Home = (): React.JSX.Element => {
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchServices(filters, pagination.currentPage, sort);
-      setIsInitialLoad(false);
-    }, isInitialLoad ? 0 : 500);
+      isInitialLoad.current = false;
+    }, isInitialLoad.current ? 0 : 500);
     return () => clearTimeout(handler);
   }, [filters, sort, pagination.currentPage, fetchServices]);
 
-  const validateBooking = (): boolean => {
+  const validateBooking = useCallback((): boolean => {
     if (!bookingData.startDate || !bookingData.endDate) {
       setBookingStatus({ success: '', error: 'Please select both start and end dates.' });
       return false;
@@ -58,7 +59,7 @@ const Home = (): React.JSX.Element => {
       return false; 
     }
     return true;
-  };
+  }, [bookingData.startDate, bookingData.endDate]);
 
   const handleBook = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -78,10 +79,10 @@ const Home = (): React.JSX.Element => {
       });
       setBookingStatus({ success: 'Booking confirmed!', error: '' });
       setTimeout(() => setSelectedService(null), 2000);
-    } catch (error: any) {
-      setBookingStatus({ success: '', error: error.response?.data?.error || 'Booking failed.' });
+    } catch (error: unknown) {
+      setBookingStatus({ success: '', error: getErrorMessage(error, 'Booking failed.') });
     }
-  }, [user, selectedService, bookingData]);
+  }, [user, selectedService, bookingData, validateBooking]);
 
   const handleOnBook = useCallback((service: Service): void => {
     setSelectedService(service);

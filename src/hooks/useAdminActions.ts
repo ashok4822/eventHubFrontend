@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import eventService, { Service, ServiceFormData } from '../services/eventService';
+import { getErrorMessage } from '../utils/error';
 
 /**
  * Custom hook to handle admin actions for services.
@@ -77,8 +78,8 @@ const useAdminActions = (onSuccess: () => void) => {
       setShowModal(false);
       resetForm();
       onSuccess();
-    } catch (error: any) {
-      setModalError(error.response?.data?.error || 'Error saving service');
+    } catch (error: unknown) {
+      setModalError(getErrorMessage(error, 'Error saving service'));
     } finally {
       setIsSubmitting(false);
     }

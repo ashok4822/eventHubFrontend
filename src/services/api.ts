@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 
 // In-memory store for the short-lived access token.
 // Keeping it out of localStorage protects against XSS attacks.

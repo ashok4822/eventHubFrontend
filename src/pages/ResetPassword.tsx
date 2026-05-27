@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import authService from '../services/authService';
 import { Lock, ShieldCheck, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { getErrorMessage } from '../utils/error';
 
 const ResetPassword = (): React.JSX.Element => {
   const { token } = useParams<{ token: string }>();
@@ -40,8 +41,8 @@ const ResetPassword = (): React.JSX.Element => {
       await authService.resetPassword(token, password);
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to reset password. The link may be expired.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to reset password. The link may be expired.'));
     } finally {
       setLoading(false);
     }

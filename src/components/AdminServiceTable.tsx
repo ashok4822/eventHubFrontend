@@ -1,9 +1,10 @@
 import React from 'react';
 import { Edit, Trash2, MapPin } from 'lucide-react';
+import { Service } from '../services/eventService';
 
 interface AdminServiceTableProps {
-  services: any[];
-  onEdit: (service: any) => void;
+  services: Service[];
+  onEdit: (service: Service) => void;
   onDelete: (id: string) => void;
 }
 
@@ -19,7 +20,7 @@ const AdminServiceTable = ({ services, onEdit, onDelete }: AdminServiceTableProp
           </tr>
         </thead>
         <tbody>
-          {services.map((service: any) => (
+          {services.map((service: Service) => (
             <tr key={service._id} style={{ borderTop: '1px solid var(--border)' }}>
               <td style={{ padding: '20px' }}>
                 <div style={{ fontWeight: '600' }}>{service.title}</div>

@@ -47,8 +47,8 @@ const bookingService = {
     return data;
   },
 
-  async getAdminBookings(): Promise<any[]> {
-    const { data } = await api.get<any[]>('/bookings/admin');
+  async getAdminBookings(): Promise<Booking[]> {
+    const { data } = await api.get<Booking[]>('/bookings/admin');
     return data;
   },
 };

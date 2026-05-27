@@ -1,7 +1,8 @@
 import React from 'react';
+import { Booking, PopulatedUser, PopulatedService } from '../services/bookingService';
 
 interface AdminBookingTableProps {
-  bookings: any[];
+  bookings: Booking[];
 }
 
 const AdminBookingTable = ({ bookings }: AdminBookingTableProps): React.JSX.Element => {
@@ -16,14 +17,17 @@ const AdminBookingTable = ({ bookings }: AdminBookingTableProps): React.JSX.Elem
           </tr>
         </thead>
         <tbody>
-          {bookings.map((booking: any) => (
-            <tr key={booking._id} style={{ borderTop: '1px solid var(--border)' }}>
-              <td style={{ padding: '20px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>#{booking._id ? booking._id.slice(-6).toUpperCase() : 'N/A'}</td>
-              <td style={{ padding: '20px' }}>{booking.serviceId?.title || 'N/A'}</td>
-              <td style={{ padding: '20px' }}>
-                <div style={{ fontWeight: '600' }}>{booking.userId?.name || 'N/A'}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{booking.userId?.email || ''}</div>
-              </td>
+          {bookings.map((booking: Booking) => {
+            const service = booking.serviceId as unknown as PopulatedService;
+            const user = booking.userId as unknown as PopulatedUser;
+            return (
+              <tr key={booking._id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ padding: '20px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>#{booking._id ? booking._id.slice(-6).toUpperCase() : 'N/A'}</td>
+                <td style={{ padding: '20px' }}>{service?.title || 'N/A'}</td>
+                <td style={{ padding: '20px' }}>
+                  <div style={{ fontWeight: '600' }}>{user?.name || 'N/A'}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{user?.email || ''}</div>
+                </td>
               <td style={{ padding: '20px' }}>{new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}</td>
               <td style={{ padding: '20px', fontWeight: 'bold' }}>₹{booking.totalPrice}</td>
               <td style={{ padding: '20px' }}>
@@ -41,8 +45,9 @@ const AdminBookingTable = ({ bookings }: AdminBookingTableProps): React.JSX.Elem
               <td style={{ padding: '20px' }}>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No Actions</div>
               </td>
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

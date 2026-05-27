@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus, User, Mail, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { getErrorMessage } from '../utils/error';
 
 interface SignupFormData {
   name: string;
@@ -59,8 +60,8 @@ const Signup = (): React.JSX.Element => {
       await signup(formData.name, formData.email, formData.password, formData.role);
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => navigate('/login'), 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Registration failed'));
     }
   };
 

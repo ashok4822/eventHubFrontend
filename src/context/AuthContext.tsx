@@ -13,7 +13,7 @@ export interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
-  signup: (name: string, email: string, password: string, role?: string) => Promise<any>;
+  signup: (name: string, email: string, password: string, role?: string) => Promise<{ message: string; user: AuthUser }>;
   logout: () => Promise<void>;
 }
 
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): React.JSX.Element
     email: string,
     password: string,
     role?: string
-  ): Promise<any> => {
+  ): Promise<{ message: string; user: AuthUser }> => {
     return await authService.signup({ name, email, password, role });
   };
 
@@ -87,6 +87,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): React.JSX.Element
 /**
  * Custom hook to use the Auth context.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
